@@ -22,7 +22,6 @@ defmodule PaymentDispatcher.Payments.Payment do
   end
 
   defp config(key) do
-    :payment_dispatcher
-    |> Application.fetch_env!(key)
+    Application.fetch_env!(:payment_dispatcher, key)
   end
 end
