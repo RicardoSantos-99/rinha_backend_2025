@@ -27,11 +27,7 @@ if config_env() == :prod do
   # to check this value into version control, so we use an environment
   # variable instead.
   secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
+    "j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2"
 
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
@@ -82,3 +78,10 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 end
+
+# Payment processor configuration
+config :payment_dispatcher,
+  processor_default_url:
+    System.get_env("PROCESSOR_DEFAULT_URL") || "http://payment-processor-default:8080",
+  processor_fallback_url:
+    System.get_env("PROCESSOR_FALLBACK_URL") || "http://payment-processor-fallback:8080"

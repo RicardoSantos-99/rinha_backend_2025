@@ -4,10 +4,19 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "9999:9999"
     networks:
       - payment-processor
     environment:
       - MIX_ENV=prod
       - PORT=4000
+      - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
+      - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
     restart: unless-stopped
+    depends_on:
+      - payment-processor-default
+      - payment-processor-fallback
+
+networks:
+  payment-processor:
+    external: true

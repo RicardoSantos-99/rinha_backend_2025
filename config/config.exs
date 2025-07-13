@@ -35,8 +35,7 @@ config :tesla, adapter: Tesla.Adapter.Hackney, disable_deprecated_builder_warnin
 config :payment_dispatcher,
   adapters: [
     payment_processor: PaymentDispatcher.Adapters.PaymentProcessor
-  ],
-  payment_processor_url: "http://localhost:8001"
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

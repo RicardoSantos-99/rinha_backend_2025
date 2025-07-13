@@ -2,15 +2,15 @@ defmodule PaymentDispatcher.Ports.PaymentProcessors do
   @doc """
   Processes a payment using the configured adapter.
   """
-  def process_payment(amount, correlation_id, requested_at) do
-    adapter().process_payment(amount, correlation_id, requested_at)
+  def process_payment(url, amount, correlation_id, requested_at) do
+    adapter().process_payment(url, amount, correlation_id, requested_at)
   end
 
   @doc """
   Performs a health check on the payment processor.
   """
-  def health_check do
-    adapter().health_check()
+  def health_check(url) do
+    adapter().health_check(url)
   end
 
   defp adapter do

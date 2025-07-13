@@ -7,16 +7,16 @@ defmodule PaymentDispatcher.Adapters.PaymentProcessor do
   @health_check_url "/payments/service-health"
 
   @impl PaymentBehaviour
-  def process_payment(amount, correlation_id, requested_at) do
-    get_url()
+  def process_payment(url, amount, correlation_id, requested_at) do
+    url
     |> Path.join(@payment_url)
     |> Tesla.post(body(amount, correlation_id, requested_at), headers())
     |> handle_response(@payment_url)
   end
 
   @impl PaymentBehaviour
-  def health_check do
-    get_url()
+  def health_check(url) do
+    url
     |> Path.join(@health_check_url)
     |> Tesla.get()
     |> handle_response(@health_check_url)
@@ -52,13 +52,5 @@ defmodule PaymentDispatcher.Adapters.PaymentProcessor do
 
   defp headers do
     [headers: [{"content-type", "application/json"}]]
-  end
-
-  defp get_url do
-    config(:payment_processor_url)
-  end
-
-  defp config(key) do
-    Application.fetch_env!(:payment_dispatcher, key)
   end
 end
