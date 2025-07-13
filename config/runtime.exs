@@ -20,15 +20,15 @@ if System.get_env("PHX_SERVER") do
   config :payment_dispatcher, PaymentDispatcherWeb.Endpoint, server: true
 end
 
-if config_env() == :prod do
-  # The secret key base is used to sign/encrypt cookies and other secrets.
-  # A default value is used in config/dev.exs and config/test.exs but you
-  # want to use a different value for prod and you most likely don't want
-  # to check this value into version control, so we use an environment
-  # variable instead.
-  secret_key_base =
-    "j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2"
+# The secret key base is used to sign/encrypt cookies and other secrets.
+# A default value is used in config/dev.exs and config/test.exs but you
+# want to use a different value for prod and you most likely don't want
+# to check this value into version control, so we use an environment
+# variable instead.
+secret_key_base =
+  "j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2"
 
+if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
