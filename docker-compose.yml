@@ -1,0 +1,13 @@
+services:
+  payment_dispatcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    networks:
+      - payment-processor
+    environment:
+      - MIX_ENV=prod
+      - PORT=4000
+    restart: unless-stopped
