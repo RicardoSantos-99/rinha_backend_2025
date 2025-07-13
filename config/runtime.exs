@@ -81,7 +81,5 @@ end
 
 # Payment processor configuration
 config :payment_dispatcher,
-  processor_default_url:
-    System.get_env("PROCESSOR_DEFAULT_URL") || "http://payment-processor-default:8080",
-  processor_fallback_url:
-    System.get_env("PROCESSOR_FALLBACK_URL") || "http://payment-processor-fallback:8080"
+  processor_default_url: System.get_env("PROCESSOR_DEFAULT_URL"),
+  processor_fallback_url: System.get_env("PROCESSOR_FALLBACK_URL")
