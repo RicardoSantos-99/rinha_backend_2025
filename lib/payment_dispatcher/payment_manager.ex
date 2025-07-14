@@ -22,8 +22,12 @@ defmodule PaymentDispatcher.PaymentManager do
     requested_at = DateTime.utc_now()
 
     amount
-    |> Payment.execute(correlation_id, requested_at)
+    |> Payment.execute_payment(correlation_id, requested_at)
     |> case do
+      {:ok, :requeue} ->
+        Process.send_after(self(), {:process_payment, amount, correlation_id}, 1000)
+        {:noreply, state}
+
       {:ok, value} ->
         {:noreply, StateManager.update_state(value, amount)}
 

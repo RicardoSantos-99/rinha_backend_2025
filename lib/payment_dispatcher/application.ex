@@ -17,7 +17,8 @@ defmodule PaymentDispatcher.Application do
       # Start to serve requests, typically the last entry
       PaymentDispatcherWeb.Endpoint,
       PaymentDispatcher.PaymentManager,
-      PaymentDispatcher.StateManager
+      PaymentDispatcher.StateManager,
+      PaymentDispatcher.PaymentRouter
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
