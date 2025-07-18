@@ -16,7 +16,12 @@ defmodule PaymentDispatcher.Application do
       # {PaymentDispatcher.Worker, arg},
       # Start to serve requests, typically the last entry
       PaymentDispatcherWeb.Endpoint,
-      PaymentDispatcher.PaymentManager,
+      :poolboy.child_spec(
+        :payment_manager_pool,
+        poolboy_config(),
+        # argumentos passados para start_link/1 do GenServer
+        []
+      ),
       PaymentDispatcher.StateManager,
       PaymentDispatcher.PaymentRouter
     ]
@@ -25,6 +30,15 @@ defmodule PaymentDispatcher.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp poolboy_config do
+    [
+      name: {:local, :payment_manager_pool},
+      worker_module: PaymentDispatcher.PaymentManager,
+      size: 5,
+      max_overflow: 0
+    ]
   end
 
   # Tell Phoenix to update the endpoint configuration

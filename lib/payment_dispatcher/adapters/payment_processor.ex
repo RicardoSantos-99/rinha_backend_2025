@@ -22,6 +22,10 @@ defmodule PaymentDispatcher.Adapters.PaymentProcessor do
     |> handle_response(@health_check_url)
   end
 
+  defp handle_response({:ok, %Tesla.Env{body: ""}}, _endpoint) do
+    {:error, "invalid response"}
+  end
+
   defp handle_response({:ok, %Tesla.Env{body: body}}, endpoint) do
     body
     |> Jason.decode()

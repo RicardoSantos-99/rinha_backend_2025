@@ -13,24 +13,18 @@ defmodule PaymentDispatcher.Payments.Payment do
   end
 
   defp do_execute_payment({psp, url}, amount, correlation_id, requested_at) do
-    url
-    |> PaymentProcessors.process_payment(amount, correlation_id, requested_at)
-    |> case do
+    case PaymentProcessors.process_payment(url, amount, correlation_id, requested_at) do
       {:ok, %{"message" => "payment processed successfully"}} ->
         {:ok, psp}
 
-      _error ->
-        {other_psp, other_url} = other_psp_url(psp)
+      {:ok, "payment processed successfully"} ->
+        {:ok, psp}
 
-        other_url
-        |> PaymentProcessors.process_payment(amount, correlation_id, requested_at)
-        |> case do
-          {:ok, %{"message" => "payment processed successfully"}} ->
-            {:ok, other_psp}
+      {:ok, %{"message" => message}} ->
+        {:error, message}
 
-          _error ->
-            {:error, "payment failed"}
-        end
+      error ->
+        IO.inspect(error)
     end
   end
 
@@ -49,9 +43,6 @@ defmodule PaymentDispatcher.Payments.Payment do
       :all_down -> :all_down
     end
   end
-
-  defp other_psp_url(:default), do: {:fallback, get_fallback_url()}
-  defp other_psp_url(:fallback), do: {:default, get_default_url()}
 
   defp get_default_url do
     config(:processor_default_url)

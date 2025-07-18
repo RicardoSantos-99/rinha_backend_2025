@@ -12,10 +12,8 @@ defmodule PaymentDispatcherWeb.PaymentsController do
     |> json(%{message: "Payment created"})
   end
 
-  def summary(conn, _params) do
-    # %{"from" => "2025-07-13T18:30:06.678Z", "to" => "2025-07-13T18:30:16.578Z"}
-
-    state = StateManager.get_state()
+  def summary(conn, %{"from" => from, "to" => to}) do
+    state = StateManager.get_state(from, to)
 
     conn
     |> put_status(:ok)

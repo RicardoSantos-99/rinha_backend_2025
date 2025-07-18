@@ -19,7 +19,6 @@ defmodule PaymentDispatcher.PaymentRouter do
   }
 
   def start_link(_state) do
-    IO.inspect("Starting PaymentRouter")
     GenServer.start_link(__MODULE__, @initial_state, name: __MODULE__)
   end
 
@@ -40,7 +39,6 @@ defmodule PaymentDispatcher.PaymentRouter do
       |> then(&update_state(Payment.fallback_health_check(), &1, :fallback))
 
     Process.send_after(self(), :check_health, 5000)
-    IO.inspect(new_state)
     {:noreply, new_state}
   end
 
@@ -81,5 +79,14 @@ defmodule PaymentDispatcher.PaymentRouter do
     Map.update!(state, psp, fn client ->
       %{client | failing: failing, min_response_time: min_response_time}
     end)
+  end
+
+  defp update_state(
+         {:error, message},
+         state,
+         _psp
+       ) do
+    IO.inspect(message)
+    state
   end
 end
