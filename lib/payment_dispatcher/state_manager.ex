@@ -37,10 +37,28 @@ defmodule PaymentDispatcher.StateManager do
   end
 
   def handle_call({:get_state, from, to}, _from, state) do
-    {:reply, state, state}
+    {:ok, from, _} = DateTime.from_iso8601(from)
+    {:ok, to, _} = DateTime.from_iso8601(to)
+
+    res = %{
+      default: sum_in_interval(state.default, from, to),
+      fallback: sum_in_interval(state.fallback, from, to)
+    }
+
+    {:reply, res, state}
   end
 
   def handle_call(:purge_payments, _from, _state) do
     {:reply, :ok, @initial_state}
+  end
+
+  defp sum_in_interval(service, from, to) do
+    Enum.reduce(service, %{totalRequests: 0, totalAmount: 0}, fn elem, acc ->
+      if DateTime.after?(elem.date, from) and DateTime.before?(elem.date, to) do
+        %{acc | totalRequests: acc.totalRequests + 1, totalAmount: acc.totalAmount + elem.amount}
+      else
+        acc
+      end
+    end)
   end
 end
