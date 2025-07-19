@@ -6,7 +6,7 @@ defmodule PaymentDispatcher.PaymentRouter do
   @default_fee 0.5
   @fallback_fee 0.15
   @latency_weight 0.0001
-  @priority_threshold 1000
+  @priority_threshold 200
 
   @initial_state %{
     default: %{
@@ -62,10 +62,7 @@ defmodule PaymentDispatcher.PaymentRouter do
           :default
 
         not default.failing and not fallback.failing ->
-          default_cost = @default_fee + default.min_response_time * @latency_weight
-          fallback_cost = @fallback_fee + fallback.min_response_time * @latency_weight
-
-          if default_cost <= fallback_cost, do: :default, else: :fallback
+          :default
       end
 
     {:reply, chosen, state}

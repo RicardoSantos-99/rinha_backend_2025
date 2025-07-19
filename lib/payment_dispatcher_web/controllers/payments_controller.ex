@@ -4,15 +4,17 @@ defmodule PaymentDispatcherWeb.PaymentsController do
   alias PaymentDispatcher.PaymentManager
   alias PaymentDispatcher.StateManager
 
-  def create(conn, %{"amount" => amount, "correlationId" => correlation_id}) do
-    PaymentManager.process_payment(amount, correlation_id)
+  def create(conn, _params) do
+    {:ok, body, _conn} = Plug.Conn.read_body(conn)
 
-    conn
-    |> put_status(:created)
-    |> json(%{message: "Payment created"})
+    PaymentManager.process_payment(body)
+
+    send_resp(conn, 201, "ok")
   end
 
-  def summary(conn, %{"from" => from, "to" => to}) do
+  def summary(conn, _params) do
+    %{"from" => from, "to" => to} = conn.query_params
+
     state = StateManager.get_state(from, to)
 
     conn

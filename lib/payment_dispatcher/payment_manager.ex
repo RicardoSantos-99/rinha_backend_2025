@@ -8,11 +8,11 @@ defmodule PaymentDispatcher.PaymentManager do
     GenServer.start_link(__MODULE__, %{})
   end
 
-  def process_payment(amount, correlation_id) do
+  def process_payment(params) do
     :poolboy.transaction(
       :payment_manager_pool,
       fn pid ->
-        GenServer.cast(pid, {:process_payment, amount, correlation_id})
+        GenServer.cast(pid, {:process_payment, params})
       end
     )
   end
@@ -30,6 +30,11 @@ defmodule PaymentDispatcher.PaymentManager do
 
   def init(state) do
     {:ok, state}
+  end
+
+  def handle_cast({:process_payment, params}, state) do
+    %{"amount" => amount, "correlationId" => correlation_id} = Jason.decode!(params)
+    do_process_payment(amount, correlation_id, state)
   end
 
   def handle_cast({:process_payment, amount, correlation_id}, state) do
