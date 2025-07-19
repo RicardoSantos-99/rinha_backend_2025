@@ -14,6 +14,7 @@ services:
       - PEER_NODES=api2@app2
       - ERL_MAX_PORTS=2046
       - PORT=9999
+      # - ELIXIR_ERL_OPTIONS="+S 1:1 +A 1 +sbwt none +sbwtdcpu none +sbwtdio none"
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
@@ -33,6 +34,7 @@ services:
       - PEER_NODES=api1@app1
       - ERL_MAX_PORTS=2046
       - PORT=9999
+      # - ELIXIR_ERL_OPTIONS="+S 1:1 +A 1 +sbwt none +sbwtdcpu none +sbwtdio none"
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080

@@ -3,7 +3,7 @@ defmodule PaymentDispatcher.Payments.Payment do
   alias PaymentDispatcher.PaymentRouter
 
   def execute_payment(amount, correlation_id, requested_at) do
-    psp = get_psp_url()
+    psp = get_psp_url(amount)
 
     do_execute_payment(psp, amount, correlation_id, requested_at)
   end
@@ -36,10 +36,11 @@ defmodule PaymentDispatcher.Payments.Payment do
     PaymentProcessors.health_check(get_fallback_url())
   end
 
-  defp get_psp_url do
-    case PaymentRouter.choose_psp() do
+  defp get_psp_url(amount) do
+    case PaymentRouter.choose_psp(amount) do
       :default -> {:default, get_default_url()}
       :fallback -> {:fallback, get_fallback_url()}
+      :requeue -> :all_down
       :all_down -> :all_down
     end
   end

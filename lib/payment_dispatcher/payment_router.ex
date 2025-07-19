@@ -6,6 +6,7 @@ defmodule PaymentDispatcher.PaymentRouter do
   @default_fee 0.5
   @fallback_fee 0.15
   @latency_weight 0.0001
+  @priority_threshold 1000
 
   @initial_state %{
     default: %{
@@ -28,8 +29,8 @@ defmodule PaymentDispatcher.PaymentRouter do
     end
   end
 
-  def choose_psp do
-    GenServer.call({:global, __MODULE__}, :choose_psp)
+  def choose_psp(amount) do
+    GenServer.call({:global, __MODULE__}, {:choose_psp, amount})
   end
 
   # GenServer callbacks
@@ -48,14 +49,14 @@ defmodule PaymentDispatcher.PaymentRouter do
     {:noreply, new_state}
   end
 
-  def handle_call(:choose_psp, _from, %{default: default, fallback: fallback} = state) do
+  def handle_call({:choose_psp, amount}, _from, %{default: default, fallback: fallback} = state) do
     chosen =
       cond do
         default.failing and fallback.failing ->
           :all_down
 
         default.failing and not fallback.failing ->
-          :fallback
+          if amount >= @priority_threshold, do: :requeue, else: :fallback
 
         not default.failing and fallback.failing ->
           :default
