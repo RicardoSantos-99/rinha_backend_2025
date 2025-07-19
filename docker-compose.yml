@@ -62,5 +62,6 @@ services:
 
 networks:
   backend:
+    driver: bridge
   payment-processor:
     external: true
