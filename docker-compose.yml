@@ -1,6 +1,6 @@
 services:
   app1: &app
-    image: ricardo2010/payment-app:latest
+    image: ricardo2010/payment-app:v1
     container_name: app1
     networks:
       - backend
