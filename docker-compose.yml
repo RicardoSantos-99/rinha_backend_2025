@@ -12,6 +12,7 @@ services:
       - RELEASE_COOKIE=secret_cookie
       - RELEASE_NODE=api1@app1
       - PEER_NODES=api2@app2
+      - ERL_MAX_PORTS=2046
       - PORT=9999
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
@@ -30,6 +31,7 @@ services:
       - RELEASE_COOKIE=secret_cookie
       - RELEASE_NODE=api2@app2
       - PEER_NODES=api1@app1
+      - ERL_MAX_PORTS=2046
       - PORT=9999
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080

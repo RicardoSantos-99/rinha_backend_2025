@@ -7,19 +7,25 @@ defmodule PaymentDispatcher.StateManager do
   }
 
   def start_link(_state) do
-    GenServer.start_link(__MODULE__, @initial_state, name: __MODULE__)
+    case GenServer.whereis({:global, __MODULE__}) do
+      nil ->
+        GenServer.start_link(__MODULE__, @initial_state, name: {:global, __MODULE__})
+
+      pid ->
+        {:ok, pid}
+    end
   end
 
   def update_state(client, amount, date) do
-    GenServer.cast(__MODULE__, {:update_state, client, amount, date})
+    GenServer.cast({:global, __MODULE__}, {:update_state, client, amount, date})
   end
 
   def get_state(from, to) do
-    GenServer.call(__MODULE__, {:get_state, from, to}, :infinity)
+    GenServer.call({:global, __MODULE__}, {:get_state, from, to}, :infinity)
   end
 
   def purge_payments do
-    GenServer.call(__MODULE__, :purge_payments)
+    GenServer.call({:global, __MODULE__}, :purge_payments)
   end
 
   # GenServer callbacks

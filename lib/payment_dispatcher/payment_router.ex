@@ -19,11 +19,17 @@ defmodule PaymentDispatcher.PaymentRouter do
   }
 
   def start_link(_state) do
-    GenServer.start_link(__MODULE__, @initial_state, name: __MODULE__)
+    case GenServer.whereis({:global, __MODULE__}) do
+      nil ->
+        GenServer.start_link(__MODULE__, @initial_state, name: {:global, __MODULE__})
+
+      pid ->
+        {:ok, pid}
+    end
   end
 
   def choose_psp do
-    GenServer.call(__MODULE__, :choose_psp)
+    GenServer.call({:global, __MODULE__}, :choose_psp)
   end
 
   # GenServer callbacks
@@ -55,17 +61,10 @@ defmodule PaymentDispatcher.PaymentRouter do
           :default
 
         not default.failing and not fallback.failing ->
-          default_cost =
-            @default_fee + default.min_response_time * @latency_weight
+          default_cost = @default_fee + default.min_response_time * @latency_weight
+          fallback_cost = @fallback_fee + fallback.min_response_time * @latency_weight
 
-          fallback_cost =
-            @fallback_fee + fallback.min_response_time * @latency_weight
-
-          if default_cost <= fallback_cost do
-            :default
-          else
-            :fallback
-          end
+          if default_cost <= fallback_cost, do: :default, else: :fallback
       end
 
     {:reply, chosen, state}
@@ -81,12 +80,8 @@ defmodule PaymentDispatcher.PaymentRouter do
     end)
   end
 
-  defp update_state(
-         {:error, message},
-         state,
-         _psp
-       ) do
-    IO.inspect(message)
+  defp update_state({:error, message}, state, _psp) do
+    IO.inspect(message, label: "Health check failed")
     state
   end
 end

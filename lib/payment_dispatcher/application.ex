@@ -7,8 +7,6 @@ defmodule PaymentDispatcher.Application do
 
   @impl true
   def start(_type, _args) do
-    connect_to_cluster(:timer.minutes(1))
-
     children = [
       PaymentDispatcherWeb.Telemetry,
       # {PaymentDispatcher.Worker, arg},
@@ -24,6 +22,8 @@ defmodule PaymentDispatcher.Application do
       PaymentDispatcher.PaymentRouter
     ]
 
+    connect_to_cluster(:timer.minutes(1))
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
@@ -37,14 +37,15 @@ defmodule PaymentDispatcher.Application do
   defp do_connect_to_cluster(timeout, start) do
     nodes = System.get_env("PEER_NODES")
 
-    {:ok, hostname} = :inet.gethostname()
+    # {:ok, hostname} = :inet.gethostname()
 
     if nodes != nil do
       success =
         nodes
         |> String.split(",")
         |> Enum.reject(&(&1 == ""))
-        |> Enum.all?(&Node.connect(String.to_atom("#{&1}#{hostname}")))
+        |> Enum.map(&String.to_atom/1)
+        |> Enum.all?(&Node.connect(&1))
 
       if success do
         IO.inspect("Connected to cluster!")
