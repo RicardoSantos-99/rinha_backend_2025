@@ -5,7 +5,7 @@ defmodule PaymentDispatcher.MixProject do
     [
       app: :payment_dispatcher,
       version: "0.1.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -19,7 +19,7 @@ defmodule PaymentDispatcher.MixProject do
   def application do
     [
       mod: {PaymentDispatcher.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: []
     ]
   end
 
@@ -33,11 +33,7 @@ defmodule PaymentDispatcher.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.7.21"},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:hackney, "~> 1.13"},
       {:tesla, "~> 1.11"},
