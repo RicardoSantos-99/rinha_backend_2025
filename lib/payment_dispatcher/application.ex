@@ -8,9 +8,6 @@ defmodule PaymentDispatcher.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      PaymentDispatcherWeb.Telemetry,
-      # {PaymentDispatcher.Worker, arg},
-      # Start to serve requests, typically the last entry
       PaymentDispatcherWeb.Endpoint,
       :poolboy.child_spec(
         :payment_manager_pool,
