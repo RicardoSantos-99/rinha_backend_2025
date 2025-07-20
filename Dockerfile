@@ -7,6 +7,7 @@ RUN apt-get update -y && apt-get install -y build-essential git \
 WORKDIR /app
 
 ENV MIX_ENV=prod
+ENV ERL_AFLAGS="+JMsingle true"
 ENV ELIXIR_COMPILER_OPTIONS="--no-parallel"
 
 RUN mix local.hex --force && mix local.rebar --force
