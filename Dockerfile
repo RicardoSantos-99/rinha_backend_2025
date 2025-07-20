@@ -40,4 +40,6 @@ COPY --from=builder --chown=nobody:root /app/_build/prod/rel/payment_dispatcher 
 
 USER nobody
 
-CMD ["/app/bin/server"]
+CMD ["/app/bin/payment_dispatcher", "start"]
+
+
