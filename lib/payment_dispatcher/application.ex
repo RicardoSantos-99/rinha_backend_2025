@@ -1,28 +1,19 @@
 defmodule PaymentDispatcher.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
-
   use Application
+
+  alias PaymentDispatcher.Server
 
   @impl true
   def start(_type, _args) do
     children = [
-      PaymentDispatcherWeb.Endpoint,
-      :poolboy.child_spec(
-        :payment_manager_pool,
-        poolboy_config(),
-        # argumentos passados para start_link/1 do GenServer
-        []
-      ),
+      :poolboy.child_spec(:payment_manager_pool, poolboy_config(), []),
       PaymentDispatcher.StateManager,
-      PaymentDispatcher.PaymentRouter
+      PaymentDispatcher.PaymentRouter,
+      {Bandit, plug: Server, port: "9999"}
     ]
 
     connect_to_cluster(:timer.minutes(1))
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
     Supervisor.start_link(children, opts)
   end
@@ -33,8 +24,6 @@ defmodule PaymentDispatcher.Application do
 
   defp do_connect_to_cluster(timeout, start) do
     nodes = System.get_env("PEER_NODES")
-
-    # {:ok, hostname} = :inet.gethostname()
 
     if nodes != nil do
       success =
@@ -62,16 +51,8 @@ defmodule PaymentDispatcher.Application do
     [
       name: {:local, :payment_manager_pool},
       worker_module: PaymentDispatcher.PaymentManager,
-      size: 3,
+      size: 25,
       max_overflow: 0
     ]
-  end
-
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
-  @impl true
-  def config_change(changed, _new, removed) do
-    PaymentDispatcherWeb.Endpoint.config_change(changed, removed)
-    :ok
   end
 end

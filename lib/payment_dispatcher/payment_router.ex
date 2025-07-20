@@ -3,20 +3,11 @@ defmodule PaymentDispatcher.PaymentRouter do
 
   alias PaymentDispatcher.Payments.Payment
 
-  @default_fee 0.5
-  @fallback_fee 0.15
-  @latency_weight 0.0001
   @priority_threshold 200
 
   @initial_state %{
-    default: %{
-      failing: false,
-      min_response_time: 1
-    },
-    fallback: %{
-      failing: false,
-      min_response_time: 1
-    }
+    default: %{failing: false},
+    fallback: %{failing: false}
   }
 
   def start_link(_state) do
@@ -68,18 +59,9 @@ defmodule PaymentDispatcher.PaymentRouter do
     {:reply, chosen, state}
   end
 
-  defp update_state(
-         {:ok, %{"failing" => failing, "minResponseTime" => min_response_time}},
-         state,
-         psp
-       ) do
+  defp update_state(failing, state, psp) do
     Map.update!(state, psp, fn client ->
-      %{client | failing: failing, min_response_time: min_response_time}
+      %{client | failing: failing}
     end)
-  end
-
-  defp update_state({:error, message}, state, _psp) do
-    IO.inspect(message, label: "Health check failed")
-    state
   end
 end

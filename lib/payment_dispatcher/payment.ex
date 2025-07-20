@@ -1,5 +1,5 @@
 defmodule PaymentDispatcher.Payments.Payment do
-  alias PaymentDispatcher.Ports.PaymentProcessors
+  alias PaymentDispatcher.Adapters.PaymentProcessor
   alias PaymentDispatcher.PaymentRouter
 
   def execute_payment(amount, correlation_id, requested_at) do
@@ -13,27 +13,18 @@ defmodule PaymentDispatcher.Payments.Payment do
   end
 
   defp do_execute_payment({psp, url}, amount, correlation_id, requested_at) do
-    case PaymentProcessors.process_payment(url, amount, correlation_id, requested_at) do
-      {:ok, %{"message" => "payment processed successfully"}} ->
-        {:ok, psp}
-
-      {:ok, "payment processed successfully"} ->
-        {:ok, psp}
-
-      {:ok, %{"message" => message}} ->
-        {:error, message}
-
-      error ->
-        IO.inspect(error)
+    case PaymentProcessor.process_payment(url, amount, correlation_id, requested_at) do
+      :ok -> {:ok, psp}
+      error -> error
     end
   end
 
   def default_health_check do
-    PaymentProcessors.health_check(get_default_url())
+    PaymentProcessor.available?(get_default_url())
   end
 
   def fallback_health_check do
-    PaymentProcessors.health_check(get_fallback_url())
+    PaymentProcessor.available?(get_fallback_url())
   end
 
   defp get_psp_url(amount) do

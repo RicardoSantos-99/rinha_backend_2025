@@ -33,7 +33,7 @@ defmodule PaymentDispatcher.PaymentManager do
   end
 
   def handle_cast({:process_payment, params}, state) do
-    %{"amount" => amount, "correlationId" => correlation_id} = Jason.decode!(params)
+    %{"amount" => amount, "correlationId" => correlation_id} = JSON.decode!(params)
     do_process_payment(amount, correlation_id, state)
   end
 
@@ -56,8 +56,7 @@ defmodule PaymentDispatcher.PaymentManager do
       {:ok, value} ->
         {:noreply, StateManager.update_state(value, amount, requested_at)}
 
-      {:error, message} ->
-        IO.inspect(inspect(message))
+      _error ->
         {:noreply, state}
     end
   end
