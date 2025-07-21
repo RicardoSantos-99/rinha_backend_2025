@@ -16,6 +16,13 @@ services:
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
+    healthcheck:
+      test: curl -f http://app1:9999/health
+      interval: 15s
+      timeout: 15s
+      start_period: 30s
+      start_interval: 1s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -36,6 +43,13 @@ services:
       - SECRET_KEY_BASE=j/s16IqcuOkGYYwGZBPTZc9clvsn7ZDeg3w+/EGAHUzDZa+VxEma/TGKMXfLXIZ2
       - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
+    healthcheck:
+      test: curl -f http://app2:9999/health
+      interval: 15s
+      timeout: 15s
+      start_period: 30s
+      start_interval: 1s
+      retries: 3
     deploy:
       resources:
         limits:
