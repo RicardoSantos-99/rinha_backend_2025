@@ -1,6 +1,7 @@
 services:
   app1: &app
-    image: ricardo2010/payment-app:v2
+    # image: ricardo2010/payment-app:v2
+    build: .
     container_name: app1
     networks:
       - payment-processor
@@ -30,6 +31,7 @@ services:
 
   app2:
     <<: *app
+    build: .
     container_name: app2
     environment:
       - MIX_ENV=prod

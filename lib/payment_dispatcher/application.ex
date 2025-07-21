@@ -6,17 +6,28 @@ defmodule PaymentDispatcher.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      :poolboy.child_spec(:payment_manager_pool, poolboy_config(), []),
-      PaymentDispatcher.StateManager,
-      PaymentDispatcher.PaymentRouter,
       {Bandit, plug: Server, port: "9999"}
     ]
+
+    children = children ++ start_global_process_if_primary_app(Node.self())
 
     connect_to_cluster(:timer.minutes(1))
 
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    children
+    |> List.flatten()
+    |> Supervisor.start_link(opts)
   end
+
+  defp start_global_process_if_primary_app(:api1@app1) do
+    [
+      PaymentDispatcher.StateManager,
+      PaymentDispatcher.PaymentRouter
+    ]
+  end
+
+  defp start_global_process_if_primary_app(_), do: []
 
   defp connect_to_cluster(timeout) do
     do_connect_to_cluster(timeout, System.monotonic_time(:second))
@@ -34,7 +45,7 @@ defmodule PaymentDispatcher.Application do
         |> Enum.all?(&Node.connect(&1))
 
       if success do
-        IO.inspect("Connected to cluster!")
+        IO.inspect("Connected to cluster!!!")
         :ok
       else
         if System.monotonic_time(:second) - start > timeout do
@@ -45,14 +56,5 @@ defmodule PaymentDispatcher.Application do
         end
       end
     end
-  end
-
-  defp poolboy_config do
-    [
-      name: {:local, :payment_manager_pool},
-      worker_module: PaymentDispatcher.PaymentManager,
-      size: 25,
-      max_overflow: 0
-    ]
   end
 end
