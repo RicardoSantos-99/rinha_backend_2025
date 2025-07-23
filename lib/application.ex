@@ -24,10 +24,7 @@ defmodule PaymentDispatcher.Application do
   end
 
   defp start_global_process_if_primary_app(:api1@app1) do
-    [
-      PaymentDispatcher.StateManager,
-      PaymentDispatcher.PaymentRouter
-    ]
+    [PaymentDispatcher.PaymentRouter]
   end
 
   defp start_global_process_if_primary_app(_), do: []
