@@ -2,7 +2,7 @@ defmodule PaymentDispatcher.Server do
   use Plug.Router
 
   alias PaymentDispatcher.PaymentManager
-  alias PaymentDispatcher.StateManager
+  alias PaymentDispatcher.Storage
 
   plug(:match)
 
@@ -21,9 +21,8 @@ defmodule PaymentDispatcher.Server do
 
     duration = System.monotonic_time(:microsecond) - start
 
-    # 5ms em microssegundos
-    if duration > 3_000 do
-      IO.inspect("[WARN] /payments demorou #{duration}µs")
+    if duration > 300 do
+      IO.inspect("[WARN] /payments demorou #{duration}")
     end
 
     send_resp(conn, 200, "")
@@ -33,27 +32,21 @@ defmodule PaymentDispatcher.Server do
     start = System.monotonic_time(:microsecond)
 
     conn = fetch_query_params(conn)
-    # _state = StateManager.get_state(conn.query_params["from"], conn.query_params["to"])
+    state = Storage.global_query(conn.query_params["from"], conn.query_params["to"])
 
     duration = System.monotonic_time(:microsecond) - start
 
-    if duration > 3_000 do
-      IO.inspect("[WARN] /payments-summary demorou #{duration}µs")
+    if duration > 300 do
+      IO.inspect("[WARN] /payments-summary demorou #{duration}")
     end
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(
-      200,
-      JSON.encode!(%{
-        default: %{totalRequests: 1, totalAmount: 10},
-        fallback: %{totalRequests: 1, totalAmount: 10}
-      })
-    )
+    |> send_resp(200, JSON.encode!(state))
   end
 
   post "/purge-payments" do
-    StateManager.purge_payments()
+    Storage.flush()
 
     send_resp(conn, 200, "")
   end

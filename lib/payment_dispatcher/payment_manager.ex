@@ -1,6 +1,6 @@
 defmodule PaymentDispatcher.PaymentManager do
   alias PaymentDispatcher.Payments.Payment
-  alias PaymentDispatcher.StateManager
+  alias PaymentDispatcher.Storage
 
   def process_payment(params) do
     Task.start(fn ->
@@ -19,8 +19,13 @@ defmodule PaymentDispatcher.PaymentManager do
           do_process_payment(amount, correlation_id)
         end)
 
-      {:ok, value} ->
-        StateManager.update_state(value, amount, requested_at)
+      {:ok, provider} ->
+        Storage.insert(%{
+          id: correlation_id,
+          executed_at: requested_at,
+          provider: provider,
+          amount: amount
+        })
 
       _error ->
         :noop

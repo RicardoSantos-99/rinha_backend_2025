@@ -2,12 +2,15 @@ defmodule PaymentDispatcher.Application do
   use Application
 
   alias PaymentDispatcher.Server
+  alias PaymentDispatcher.Storage
 
   @impl true
   def start(_type, _args) do
     children = [
       {Bandit, plug: Server, port: "9999"}
     ]
+
+    Storage.init()
 
     children = children ++ start_global_process_if_primary_app(Node.self())
 
