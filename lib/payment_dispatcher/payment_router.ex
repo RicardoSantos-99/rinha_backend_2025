@@ -1,27 +1,19 @@
 defmodule PaymentDispatcher.PaymentRouter do
   use GenServer
 
-  alias PaymentDispatcher.Payments.Payment
+  alias PaymentDispatcher.Adapters.PaymentProcessor
 
-  @priority_threshold 200
-
-  @initial_state %{
-    default: %{failing: false},
-    fallback: %{failing: false}
-  }
+  @initial_state %{default: %{failing: false}, fallback: %{failing: false}}
 
   def start_link(_state) do
     case GenServer.whereis({:global, __MODULE__}) do
-      nil ->
-        GenServer.start_link(__MODULE__, @initial_state, name: {:global, __MODULE__})
-
-      pid ->
-        {:ok, pid}
+      nil -> GenServer.start_link(__MODULE__, @initial_state, name: {:global, __MODULE__})
+      pid -> {:ok, pid}
     end
   end
 
-  def choose_psp(amount) do
-    GenServer.call({:global, __MODULE__}, {:choose_psp, amount})
+  def choose_psp() do
+    GenServer.call({:global, __MODULE__}, :choose_psp)
   end
 
   # GenServer callbacks
@@ -32,22 +24,23 @@ defmodule PaymentDispatcher.PaymentRouter do
 
   def handle_info(:check_health, state) do
     new_state =
-      Payment.default_health_check()
+      :default
+      |> PaymentProcessor.available?()
       |> update_state(state, :default)
-      |> then(&update_state(Payment.fallback_health_check(), &1, :fallback))
+      |> then(&update_state(PaymentProcessor.available?(:fallback), &1, :fallback))
 
     Process.send_after(self(), :check_health, 5000)
     {:noreply, new_state}
   end
 
-  def handle_call({:choose_psp, amount}, _from, %{default: default, fallback: fallback} = state) do
+  def handle_call(:choose_psp, _from, %{default: default, fallback: fallback} = state) do
     chosen =
       cond do
         default.failing and fallback.failing ->
           :all_down
 
         default.failing and not fallback.failing ->
-          if amount >= @priority_threshold, do: :requeue, else: :fallback
+          :fallback
 
         not default.failing and fallback.failing ->
           :default

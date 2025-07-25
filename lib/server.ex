@@ -1,44 +1,38 @@
 defmodule PaymentDispatcher.Server do
   use Plug.Router
 
-  alias PaymentDispatcher.PaymentManager
+  require Logger
+
+  alias PaymentDispatcher.PendingQueue
   alias PaymentDispatcher.Storage
 
   plug(:match)
 
   plug(Plug.Parsers,
-    parsers: [:urlencoded],
-    pass: ["*/*"]
+    parsers: [:json],
+    pass: ["application/json"],
+    json_decoder: JSON
   )
 
   plug(:dispatch)
 
   post "/payments" do
-    start = System.monotonic_time(:microsecond)
+    start = System.monotonic_time()
 
-    {:ok, body, _conn} = Plug.Conn.read_body(conn)
-    PaymentManager.process_payment(body)
+    body = conn.body_params
+    PendingQueue.insert(%{amount: body["amount"], correlation_id: body["correlationId"]})
 
-    duration = System.monotonic_time(:microsecond) - start
-
-    if duration > 300 do
-      IO.inspect("[WARN] /payments demorou #{duration}")
-    end
-
+    log_duration("/payments", start)
     send_resp(conn, 200, "")
   end
 
   get "/payments-summary" do
-    start = System.monotonic_time(:microsecond)
+    start = System.monotonic_time()
 
     conn = fetch_query_params(conn)
     state = Storage.global_query(conn.query_params["from"], conn.query_params["to"])
 
-    duration = System.monotonic_time(:microsecond) - start
-
-    if duration > 300 do
-      IO.inspect("[WARN] /payments-summary demorou #{duration}")
-    end
+    log_duration("/payments-summary", start)
 
     conn
     |> put_resp_content_type("application/json")
@@ -46,16 +40,31 @@ defmodule PaymentDispatcher.Server do
   end
 
   post "/purge-payments" do
+    start = System.monotonic_time()
+
     Storage.flush()
 
+    log_duration("/purge-payments", start)
     send_resp(conn, 200, "")
   end
 
   get "/health" do
+    start = System.monotonic_time()
+
+    log_duration("/health", start)
     send_resp(conn, 200, "")
   end
 
   match _ do
     send_resp(conn, 404, "not found")
+  end
+
+  defp log_duration(endpoint, start_time) do
+    elapsed_us = System.monotonic_time() - start_time
+    elapsed_ms = System.convert_time_unit(elapsed_us, :native, :millisecond)
+
+    if elapsed_ms > 1 do
+      Logger.warning("[#{endpoint}] took #{elapsed_ms}ms")
+    end
   end
 end

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+case $1 in
+  migrate)
+    echo "Running Migrations"
+    /app/bin/payment_dispatcher eval "ReleaseTasks.migrate()"
+    ;;
+  create_db)
+    echo "Creating Database"
+    /app/bin/payment_dispatcher eval "ReleaseTasks.create_db()"
+    ;;
+  *)
+    /app/bin/payment_dispatcher "$@"
+    ;;
+esac

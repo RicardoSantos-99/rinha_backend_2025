@@ -14,14 +14,13 @@ defmodule PaymentDispatcher.MixProject do
   def application do
     [
       mod: {PaymentDispatcher.Application, []},
-      extra_applications: [:logger, :inets]
+      extra_applications: [:logger, :inets, :observer, :wx]
     ]
   end
 
   defp deps do
     [
       {:bandit, "~> 1.7"},
-      {:poolboy, "~> 1.5"},
       {:plug, "~> 1.18"}
     ]
   end

@@ -1,45 +1,92 @@
-# Etapa de build
-FROM hexpm/elixir:1.18.0-erlang-27.0.1-debian-bullseye-20241223-slim AS builder
+# ---------------------------------------------------------#
+# Build Release                                            #
+# ---------------------------------------------------------#
+ARG ELIXIR_VERSION=1.18.4
+ARG OTP_VERSION=28.0.1
+ARG DEBIAN_VERSION=bookworm-20250630
 
-RUN apt-get update -y && apt-get install -y build-essential git \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
+ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
+FROM ${BUILDER_IMAGE} AS builder
+
+ENV TZ=America/Sao_Paulo
+ENV ERL_AFLAGS="+JMsingle true"
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y && apt-get install -y build-essential git wget ca-certificates && \
+    apt-get clean && rm -f /var/lib/apt/lists/*_*
+
+# install hex + rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+# prepare build dir
 WORKDIR /app
 
-ENV MIX_ENV=prod
-ENV ERL_AFLAGS="+JMsingle true"
-ENV ELIXIR_COMPILER_OPTIONS="--no-parallel"
+# set build ENV
+ARG MIX_ENV="prod"
+ENV MIX_ENV=${MIX_ENV}
 
-RUN mix local.hex --force && mix local.rebar --force
-
+# install mix dependencies
 COPY mix.exs mix.lock ./
-COPY config config
+RUN mix deps.get --only $MIX_ENV
+RUN mkdir config
+
+# copy compile-time config files before we compile dependencies
+# to ensure any relevant config change will trigger the dependencies
+# to be re-compiled.
+COPY config config/
+RUN mix deps.compile
+
+# COPY priv priv
 COPY lib lib
 
-RUN mix deps.get
+# Compile the release
 RUN mix compile
-RUN mix release
 
-# Etapa final (runtime)
-FROM debian:bullseye-20241223-slim
+COPY rel rel
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN mix release --path release
 
+# Copy custom commands
+RUN mkdir -p release/bin/commands && cp rel/commands/* release/bin/commands
+
+# ---------------------------------------------------------#
+# Run Release                                              #
+# ---------------------------------------------------------#
+FROM ${RUNNER_IMAGE}
+
+RUN apt-get update -y \
+    && apt-get install -y libstdc++6 openssl libncurses5 locales tini curl procps dnsutils ca-certificates tzdata \
+    && ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean \
+    && rm -f /var/lib/apt/lists/*_*
+
+ENV TZ="America/Sao_Paulo"
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
-ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8 \
-    MIX_ENV=prod
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
-WORKDIR /app
+WORKDIR "/app"
 RUN chown nobody /app
 
-COPY --from=builder --chown=nobody:root /app/_build/prod/rel/payment_dispatcher ./
+# set runner ENV
+ENV MIX_ENV="prod"
+
+# Only copy the final release from the build stage
+COPY --from=builder --chown=nobody:root /app/release /app/.
+RUN chmod u+x /app/bin/commands/*
 
 USER nobody
 
-CMD ["/app/bin/payment_dispatcher", "start"]
+ENV PATH=/app/bin/commands:$PATH
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
+CMD ["sh", "-c", "payment_dispatcher start"]

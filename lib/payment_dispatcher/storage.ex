@@ -10,18 +10,18 @@ defmodule PaymentDispatcher.Storage do
       :public,
       :named_table,
       decentralized_counters: true,
-      write_concurrency: true,
-      read_concurrency: true
+      write_concurrency: true
     ])
   end
 
-  def insert(%{id: tx_id, executed_at: executed_at, provider: provider, amount: amount}) do
-    timestamp = DateTime.to_unix(executed_at, :millisecond)
+  def write(payment) do
+    timestamp =
+      payment.requested_at |> DateTime.from_iso8601() |> elem(1) |> DateTime.to_unix(:millisecond)
 
-    :ets.insert(__MODULE__, {
-      {timestamp, tx_id},
-      %{id: tx_id, executed_at: timestamp, provider: provider, amount: amount}
-    })
+    :ets.insert(
+      __MODULE__,
+      {{timestamp, payment.correlation_id}, %{provider: payment.provider, amount: payment.amount}}
+    )
   end
 
   def flush(), do: :ets.delete_all_objects(__MODULE__)
@@ -35,7 +35,9 @@ defmodule PaymentDispatcher.Storage do
       IO.warn("Falha ao consultar nodes: #{inspect(fails)}")
     end
 
-    aggregate_payment_from_nodes(payments)
+    payments
+    |> aggregate_payment_from_nodes()
+    |> format_result()
   end
 
   def query_range(from, to) do
@@ -50,48 +52,36 @@ defmodule PaymentDispatcher.Storage do
   end
 
   defp query(nil, nil) do
-    [
-      {
-        {{:"$1", :"$2"}, :"$3"},
-        [],
-        [:"$3"]
-      }
-    ]
+    [{{{:"$1", :"$2"}, :"$3"}, [], [:"$3"]}]
   end
 
   defp query(nil, to) do
-    [
-      {
-        {{:"$1", :"$2"}, :"$3"},
-        [{:"=<", :"$1", to}],
-        [:"$3"]
-      }
-    ]
+    [{{{:"$1", :"$2"}, :"$3"}, [{:"=<", :"$1", to}], [:"$3"]}]
   end
 
   defp query(from, nil) do
-    [
-      {
-        {{:"$1", :"$2"}, :"$3"},
-        [{:>=, :"$1", from}],
-        [:"$3"]
-      }
-    ]
+    [{{{:"$1", :"$2"}, :"$3"}, [{:>=, :"$1", from}], [:"$3"]}]
   end
 
   defp query(from, to) do
-    [
-      {
-        {{:"$1", :"$2"}, :"$3"},
-        [{:andalso, {:>=, :"$1", from}, {:"=<", :"$1", to}}],
-        [:"$3"]
-      }
-    ]
+    [{{{:"$1", :"$2"}, :"$3"}, [{:andalso, {:>=, :"$1", from}, {:"=<", :"$1", to}}], [:"$3"]}]
   end
 
   defp aggregate_result(payments) do
     Enum.reduce(payments, @state, fn payment, acc ->
       Map.update!(acc, payment.provider, &count_payment(&1, payment.amount))
+    end)
+  end
+
+  defp format_result(data) do
+    Enum.into(data, %{}, fn {key, %{totalRequests: req, totalAmount: amt}} ->
+      rounded_amt =
+        case amt do
+          x when is_float(x) -> Float.round(x, 2)
+          x when is_integer(x) -> Float.round(x * 1.0, 2)
+        end
+
+      {key, %{totalRequests: req, totalAmount: rounded_amt}}
     end)
   end
 
