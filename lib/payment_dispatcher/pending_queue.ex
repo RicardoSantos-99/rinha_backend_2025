@@ -1,22 +1,18 @@
 defmodule PaymentDispatcher.PendingQueue do
-  use GenServer
+  @shards 10
 
-  def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: __MODULE__)
-  end
-
-  def init(_args) do
+  def init_all() do
     :ok = init_index_counter()
 
-    :ets.new(__MODULE__, [
-      :ordered_set,
-      :public,
-      :named_table,
-      read_concurrency: true,
-      write_concurrency: true
-    ])
-
-    {:ok, nil}
+    for i <- 1..@shards do
+      :ets.new(table_name(i), [
+        :ordered_set,
+        :public,
+        :named_table,
+        read_concurrency: true,
+        write_concurrency: true
+      ])
+    end
   end
 
   def init_index_counter() do
@@ -30,28 +26,31 @@ defmodule PaymentDispatcher.PendingQueue do
   end
 
   def insert(payment) do
-    true = :ets.insert(__MODULE__, {get_next_index(), payment})
-
+    idx = get_next_index()
+    shard = rem(idx, @shards) + 1
+    :ets.insert(table_name(shard), {idx, payment})
     :ok
   end
 
   def insert(payment, index) do
-    :ets.insert(__MODULE__, {index, payment})
+    shard = rem(index, @shards) + 1
+    :ets.insert(table_name(shard), {index, payment})
   end
 
-  def take_next() do
-    case :ets.first(__MODULE__) do
+  def take_next(shard) do
+    table = table_name(shard)
+
+    case :ets.first(table) do
       :"$end_of_table" ->
         :empty
 
       index ->
-        case :ets.take(__MODULE__, index) do
-          [] ->
-            take_next()
-
-          [{^index, payment}] ->
-            {index, payment}
+        case :ets.take(table, index) do
+          [] -> take_next(shard)
+          [{^index, payment}] -> {index, payment}
         end
     end
   end
+
+  defp table_name(i), do: :"pending_queue_#{i}"
 end

@@ -7,22 +7,23 @@ defmodule PaymentDispatcher.Application do
   alias PaymentDispatcher.Worker
   alias PaymentDispatcher.PaymentRouter
 
+  @shards 10
+
   @impl true
   def start(_type, _args) do
-    IO.inspect(Node.self())
     connect_to_cluster(:timer.minutes(1))
 
+    PendingQueue.init_all()
+    Storage.init()
+
     children = [
-      PendingQueue,
       start_global_process_if_primary_app(Node.self()),
       workers(),
       {
         Bandit,
-        plug: Server, scheme: :http, port: 9999, thousand_island_options: [num_acceptors: 2]
+        plug: Server, scheme: :http, port: 9999, thousand_island_options: [num_acceptors: 25]
       }
     ]
-
-    Storage.init()
 
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
 
@@ -33,11 +34,15 @@ defmodule PaymentDispatcher.Application do
 
   defp start_global_process_if_primary_app(:api1@app1), do: [PaymentRouter]
   defp start_global_process_if_primary_app(:nonode@nohost), do: [PaymentRouter]
-
   defp start_global_process_if_primary_app(_), do: []
 
   defp workers() do
-    Enum.map(1..5, fn i -> %{id: {:processor, i}, start: {Worker, :start_link, [[]]}} end)
+    for shard <- 1..@shards do
+      %{
+        id: {:worker, shard},
+        start: {Worker, :start_link, [shard]}
+      }
+    end
   end
 
   defp connect_to_cluster(timeout) do
@@ -45,27 +50,29 @@ defmodule PaymentDispatcher.Application do
   end
 
   defp do_connect_to_cluster(timeout, start) do
-    nodes = System.get_env("PEER_NODES")
-
-    if nodes != nil do
-      success =
-        nodes
-        |> String.split(",")
-        |> Enum.reject(&(&1 == ""))
-        |> Enum.map(&String.to_atom/1)
-        |> Enum.all?(&Node.connect(&1))
-
-      if success do
-        IO.inspect("Connected to cluster!!!")
+    case System.get_env("PEER_NODES") do
+      nil ->
         :ok
-      else
-        if System.monotonic_time(:second) - start > timeout do
-          raise "TIMEOUT! Could not connect to cluster!"
+
+      nodes ->
+        success =
+          nodes
+          |> String.split(",")
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.map(&String.to_atom/1)
+          |> Enum.all?(&Node.connect/1)
+
+        if success do
+          IO.inspect("Connected to cluster!!!")
+          :ok
         else
-          Process.sleep(:timer.seconds(1))
-          do_connect_to_cluster(timeout, start)
+          if System.monotonic_time(:second) - start > timeout do
+            raise "TIMEOUT! Could not connect to cluster!"
+          else
+            Process.sleep(:timer.seconds(1))
+            do_connect_to_cluster(timeout, start)
+          end
         end
-      end
     end
   end
 end

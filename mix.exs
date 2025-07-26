@@ -14,7 +14,7 @@ defmodule PaymentDispatcher.MixProject do
   def application do
     [
       mod: {PaymentDispatcher.Application, []},
-      extra_applications: [:logger, :inets, :observer, :wx]
+      extra_applications: [:inets]
     ]
   end
 

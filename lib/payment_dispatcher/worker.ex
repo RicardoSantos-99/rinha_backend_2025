@@ -6,45 +6,39 @@ defmodule PaymentDispatcher.Worker do
   alias PaymentDispatcher.Adapters.PaymentProcessor
   alias PaymentDispatcher.Storage
 
-  def start_link(_args) do
-    GenServer.start_link(__MODULE__, %{})
+  def start_link(shard_id) do
+    GenServer.start_link(__MODULE__, %{shard: shard_id})
   end
 
-  def init(_) do
+  def init(state) do
     Process.send_after(self(), :process_payment, 0)
-    {:ok, nil}
+    {:ok, state}
   end
 
-  def handle_info(:process_payment, state) do
-    process_payment(current_provider())
+  def handle_info(:process_payment, %{shard: shard} = state) do
+    process_payment(shard, current_provider())
     Process.send_after(self(), :process_payment, 0)
-
     {:noreply, state}
   end
 
-  defp process_payment(:all_down), do: :ok
+  defp process_payment(_shard, :all_down), do: :ok
 
-  defp process_payment(provider) do
-    case PendingQueue.take_next() do
+  defp process_payment(shard, provider) do
+    case PendingQueue.take_next(shard) do
       {_index, payment} ->
         now = DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-
         payment = Map.merge(payment, %{provider: provider, requested_at: now})
         do_payment(payment)
 
-      _ ->
+      :empty ->
         :noop
     end
   end
 
   defp do_payment(payment) do
     case PaymentProcessor.process_payment(payment) do
-      :ok ->
-        true = Storage.write(payment)
-        :ok
-
-      :error ->
-        PendingQueue.insert(payment)
+      :ok -> Storage.write(payment)
+      :error -> PendingQueue.insert(payment)
     end
   end
 

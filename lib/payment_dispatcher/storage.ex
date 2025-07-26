@@ -74,12 +74,8 @@ defmodule PaymentDispatcher.Storage do
   end
 
   defp format_result(data) do
-    Enum.into(data, %{}, fn {key, %{totalRequests: req, totalAmount: amt}} ->
-      rounded_amt =
-        case amt do
-          x when is_float(x) -> Float.round(x, 2)
-          x when is_integer(x) -> Float.round(x * 1.0, 2)
-        end
+    Enum.into(data, %{}, fn {key, %{totalRequests: req, totalAmount: amount}} ->
+      rounded_amt = round_amount(amount)
 
       {key, %{totalRequests: req, totalAmount: rounded_amt}}
     end)
@@ -89,7 +85,7 @@ defmodule PaymentDispatcher.Storage do
     %{
       acc
       | totalRequests: acc.totalRequests + 1,
-        totalAmount: acc.totalAmount + amount
+        totalAmount: round_amount(acc.totalAmount + amount)
     }
   end
 
@@ -112,4 +108,7 @@ defmodule PaymentDispatcher.Storage do
       _ -> nil
     end
   end
+
+  defp round_amount(amount) when is_float(amount), do: Float.round(amount, 2)
+  defp round_amount(amount) when is_integer(amount), do: Float.round(amount * 1.0, 2)
 end
