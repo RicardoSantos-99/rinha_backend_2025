@@ -27,8 +27,9 @@ defmodule PaymentDispatcher.Worker do
     case PendingQueue.take_next(shard) do
       {_index, payment} ->
         now = DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-        payment = Map.merge(payment, %{provider: provider, requested_at: now})
-        do_payment(payment)
+        payment_decode = decode(payment)
+        merged_payment = Map.merge(payment_decode, %{provider: provider, requested_at: now})
+        do_payment(merged_payment)
 
       :empty ->
         :noop
@@ -54,5 +55,18 @@ defmodule PaymentDispatcher.Worker do
           :exit, _ -> :all_down
         end
     end
+  end
+
+  defp decode(payment) when is_binary(payment) do
+    payment = JSON.decode!(payment)
+
+    %{
+      amount: payment["amount"],
+      correlation_id: payment["correlationId"]
+    }
+  end
+
+  defp decode(payment) when is_map(payment) do
+    payment
   end
 end

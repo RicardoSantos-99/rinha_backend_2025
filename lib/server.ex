@@ -7,32 +7,20 @@ defmodule PaymentDispatcher.Server do
   alias PaymentDispatcher.Storage
 
   plug(:match)
-
-  plug(Plug.Parsers,
-    parsers: [:json],
-    pass: ["application/json"],
-    json_decoder: JSON
-  )
-
   plug(:dispatch)
 
   post "/payments" do
-    start = System.monotonic_time()
+    {:ok, body, _} = read_body(conn)
+    PendingQueue.insert(body)
 
-    body = conn.body_params
-    PendingQueue.insert(%{amount: body["amount"], correlation_id: body["correlationId"]})
-
-    log_duration("/payments", start)
     send_resp(conn, 200, "")
   end
 
   get "/payments-summary" do
-    start = System.monotonic_time()
+    Process.flag(:priority, :max)
 
     conn = fetch_query_params(conn)
     state = Storage.global_query(conn.query_params["from"], conn.query_params["to"])
-
-    log_duration("/payments-summary", start)
 
     conn
     |> put_resp_content_type("application/json")
@@ -49,9 +37,6 @@ defmodule PaymentDispatcher.Server do
   end
 
   get "/health" do
-    start = System.monotonic_time()
-
-    log_duration("/health", start)
     send_resp(conn, 200, "")
   end
 

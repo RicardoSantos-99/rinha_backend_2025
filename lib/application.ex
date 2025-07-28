@@ -12,6 +12,7 @@ defmodule PaymentDispatcher.Application do
   @impl true
   def start(_type, _args) do
     connect_to_cluster(:timer.minutes(1))
+    Process.flag(:fullsweep_after, 1_000_000_000)
 
     PendingQueue.init_all()
     Storage.init()
@@ -21,15 +22,21 @@ defmodule PaymentDispatcher.Application do
       workers(),
       {
         Bandit,
-        plug: Server, scheme: :http, port: 9999, thousand_island_options: [num_acceptors: 25]
+        plug: Server, scheme: :http, port: 9999, thousand_island_options: [num_acceptors: 35]
       }
     ]
 
+    Enum.each(:code.all_loaded(), fn {mod, _} -> :code.ensure_loaded(mod) end)
+
     opts = [strategy: :one_for_one, name: PaymentDispatcher.Supervisor]
 
-    children
-    |> List.flatten()
-    |> Supervisor.start_link(opts)
+    {:ok, sup} =
+      children
+      |> List.flatten()
+      |> Supervisor.start_link(opts)
+
+    PaymentDispatcher.Warmup.run(40)
+    {:ok, sup}
   end
 
   defp start_global_process_if_primary_app(:api1@app1), do: [PaymentRouter]

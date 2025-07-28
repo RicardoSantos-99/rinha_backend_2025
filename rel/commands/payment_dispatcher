@@ -1,15 +1,23 @@
 #!/bin/sh
+set -e
 
-case $1 in
+case "$1" in
   migrate)
     echo "Running Migrations"
-    /app/bin/payment_dispatcher eval "ReleaseTasks.migrate()"
+    exec /app/bin/payment_dispatcher eval "ReleaseTasks.migrate()"
     ;;
   create_db)
     echo "Creating Database"
-    /app/bin/payment_dispatcher eval "ReleaseTasks.create_db()"
+    exec /app/bin/payment_dispatcher eval "ReleaseTasks.create_db()"
     ;;
   *)
-    /app/bin/payment_dispatcher "$@"
-    ;;
+    echo "Starting PaymentDispatcher with tuned VM flags"
+    exec /app/bin/payment_dispatcher start -- \
+      +S 1 \
+      +A 64 \
+      +P 1048576 \
+      -env ERL_FULLSWEEP_AFTER 1000000000 \
+      +sbwt none \
+      +sbwtdcpu none \
+      +sbwtdio none
 esac
